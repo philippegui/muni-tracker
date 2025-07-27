@@ -1,0 +1,214 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww12720\viewh7240\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs28 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+    <meta charset="UTF-8">\
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <title>SFMTA/MUNI Arrival Times</title>\
+    <script src="https://cdn.tailwindcss.com"></script>\
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\
+    <style>\
+        body \{\
+            font-family: 'Inter', sans-serif;\
+        \}\
+        .bus-card \{\
+            transition: all 0.3s ease-in-out;\
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);\
+        \}\
+        .bus-card:hover \{\
+            transform: translateY(-4px);\
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);\
+        \}\
+        .loader \{\
+            border-top-color: #3498db;\
+            animation: spin 1s ease-in-out infinite;\
+        \}\
+        @keyframes spin \{\
+            to \{ transform: rotate(360deg); \}\
+        \}\
+    </style>\
+</head>\
+<body class="bg-gray-100 text-gray-800">\
+\
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">\
+        <header class="text-center mb-8">\
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">SFMTA Real-Time Arrivals</h1>\
+            <p class="text-gray-600 mt-2">Live MUNI and Bus Arrival Predictions</p>\
+        </header>\
+\
+        <!-- Loading Indicator -->\
+        <div id="loader" class="flex justify-center items-center h-64">\
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>\
+        </div>\
+\
+        <!-- Main Content -->\
+        <main id="main-content" class="hidden">\
+            <div id="stops-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">\
+                <!-- Stop cards will be injected here by JavaScript -->\
+            </div>\
+            <div class="text-center mt-8 text-sm text-gray-500">\
+                <p>Last updated: <span id="last-updated"></span></p>\
+                <p class="mt-1">Data provided by <a href="https://511.org/" target="_blank" class="text-blue-500 hover:underline">511.org</a>. Automatically refreshes every 30 seconds.</p>\
+            </div>\
+        </main>\
+        \
+        <!-- Error Message -->\
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative text-center" role="alert">\
+            <strong class="font-bold">Error:</strong>\
+            <span class="block sm:inline" id="error-text"></span>\
+        </div>\
+\
+    </div>\
+\
+    <script>\
+        document.addEventListener('DOMContentLoaded', () => \{\
+            const API_KEY = '0b1cdfc5-e9e8-4537-bbf7-f92773580dd7';\
+            const BASE_URL = 'https://api.511.org/transit/StopMonitoring';\
+            const AGENCY = 'SF';\
+\
+            const stops = [\
+                \{ id: '15307', name: '7 Inbound to Downtown', location: 'Lincoln Way & 17th Ave' \},\
+                \{ id: '14714', name: '7 Outbound to Ocean Beach', location: 'Frederick St & Arguello Blvd' \},\
+                \{ id: '15118', name: 'N West to Ocean Beach', location: 'Irving St & 2nd Ave' \}\
+            ];\
+\
+            const loader = document.getElementById('loader');\
+            const mainContent = document.getElementById('main-content');\
+            const stopsContainer = document.getElementById('stops-container');\
+            const lastUpdatedSpan = document.getElementById('last-updated');\
+            const errorMessageDiv = document.getElementById('error-message');\
+            const errorTextSpan = document.getElementById('error-text');\
+\
+            // Function to fetch and display arrival times\
+            async function fetchArrivals() \{\
+                if (!mainContent.classList.contains('hidden')) \{\
+                    console.log('Refreshing data...');\
+                \} else \{\
+                    loader.classList.remove('hidden');\
+                \}\
+                \
+                errorMessageDiv.classList.add('hidden');\
+\
+                const requests = stops.map(stop => \{\
+                    const url = `$\{BASE_URL\}?api_key=$\{API_KEY\}&agency=$\{AGENCY\}&stopCode=$\{stop.id\}&format=json`;\
+                    return fetch(url)\
+                        .then(response => \{\
+                            if (!response.ok) throw new Error(`Network response was not ok for stop $\{stop.id\}.`);\
+                            return response.json();\
+                        \})\
+                        .catch(error => \{\
+                            console.error(`Fetch error for stop $\{stop.id\}:`, error);\
+                            return \{ error: true, stopId: stop.id, message: error.message \};\
+                        \});\
+                \});\
+\
+                try \{\
+                    const results = await Promise.all(requests);\
+                    renderStops(results);\
+                    loader.classList.add('hidden');\
+                    mainContent.classList.remove('hidden');\
+                \} catch (error) \{\
+                    console.error('Error fetching all stop data:', error);\
+                    showError('Could not fetch arrival data. Please check your connection or the API status.');\
+                    loader.classList.add('hidden');\
+                    mainContent.classList.add('hidden');\
+                \}\
+            \}\
+\
+            // Function to render stop data onto the page\
+            function renderStops(results) \{\
+                stopsContainer.innerHTML = ''; // Clear previous content\
+\
+                results.forEach((result, index) => \{\
+                    const stopInfo = stops[index];\
+                    const card = document.createElement('div');\
+                    card.className = 'bus-card bg-white p-6 rounded-lg shadow-md flex flex-col';\
+\
+                    let content = `\
+                        <div class="flex-grow">\
+                            <h2 class="text-xl font-bold text-gray-800">$\{stopInfo.name\}</h2>\
+                            <p class="text-sm text-gray-500">$\{stopInfo.location\}</p>\
+                            <p class="text-xs text-gray-400 mb-4">Stop $\{stopInfo.id\}</p>\
+                            <ul class="space-y-2">\
+                    `;\
+\
+                    if (result.error) \{\
+                         content += `<li class="text-red-500">\uc0\u9888 \u65039  Could not load arrivals.</li>`;\
+                    \} else \{\
+                        const arrivals = result.ServiceDelivery?.StopMonitoringDelivery?.MonitoredStopVisit || [];\
+                        const filteredArrivals = arrivals.slice(0, 5);\
+\
+                        if (filteredArrivals.length > 0) \{\
+                            filteredArrivals.forEach(arrival => \{\
+                                const journey = arrival.MonitoredVehicleJourney;\
+                                const call = journey.MonitoredCall;\
+                                const arrivalTime = call.ExpectedArrivalTime || call.AimedArrivalTime;\
+                                const minutes = calculateMinutesUntil(arrivalTime);\
+                                const formattedTime = formatArrivalTime(arrivalTime);\
+                                content += `\
+                                    <li class="flex justify-between items-baseline bg-gray-50 p-3 rounded-md">\
+                                        <span class="font-bold text-lg text-blue-600">$\{minutes\}</span>\
+                                        <span class="text-sm text-gray-500">$\{formattedTime\}</span>\
+                                    </li>\
+                                `;\
+                            \});\
+                        \} else \{\
+                            content += `<li class="text-gray-600">No upcoming arrivals found.</li>`;\
+                        \}\
+                    \}\
+\
+                    content += `</ul></div>`;\
+                    card.innerHTML = content;\
+                    stopsContainer.appendChild(card);\
+                \});\
+                \
+                lastUpdatedSpan.textContent = new Date().toLocaleTimeString();\
+            \}\
+            \
+            // Function to calculate minutes until arrival\
+            function calculateMinutesUntil(arrivalTimeStr) \{\
+                if (!arrivalTimeStr) return 'N/A';\
+                const arrivalTime = new Date(arrivalTimeStr);\
+                const now = new Date();\
+                const diffMs = arrivalTime - now;\
+                const diffMins = Math.round(diffMs / 60000);\
+\
+                if (diffMins <= 0) \{\
+                    return 'Now';\
+                \}\
+                return `$\{diffMins\} min`;\
+            \}\
+\
+            // Function to format the absolute arrival time\
+            function formatArrivalTime(arrivalTimeStr) \{\
+                if (!arrivalTimeStr) return '';\
+                const date = new Date(arrivalTimeStr);\
+                return date.toLocaleTimeString('en-US', \{\
+                    hour: 'numeric',\
+                    minute: '2-digit',\
+                    hour12: true\
+                \});\
+            \}\
+\
+            // Function to display a global error message\
+            function showError(message) \{\
+                errorTextSpan.textContent = message;\
+                errorMessageDiv.classList.remove('hidden');\
+            \}\
+\
+            // Initial fetch and set interval for refreshing\
+            fetchArrivals();\
+            setInterval(fetchArrivals, 30000); // Refresh every 30 seconds\
+        \});\
+    </script>\
+\
+</body>\
+</html>}
