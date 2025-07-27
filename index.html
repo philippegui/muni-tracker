@@ -128,7 +128,7 @@
                             <h2 class="text-xl font-bold text-gray-800">${stopInfo.name}</h2>
                             <p class="text-sm text-gray-500">${stopInfo.location}</p>
                             <p class="text-xs text-gray-400 mb-4">Stop ${stopInfo.id}</p>
-                            <ul class="space-y-2">
+                            <ul class="space-y-1">
                     `;
 
                     if (result.error) {
@@ -138,21 +138,29 @@
                         const filteredArrivals = arrivals.slice(0, 5);
 
                         if (filteredArrivals.length > 0) {
-                            filteredArrivals.forEach(arrival => {
+                            filteredArrivals.forEach((arrival, arrIndex) => {
                                 const journey = arrival.MonitoredVehicleJourney;
                                 const call = journey.MonitoredCall;
                                 const arrivalTime = call.ExpectedArrivalTime || call.AimedArrivalTime;
                                 const minutes = calculateMinutesUntil(arrivalTime);
                                 const formattedTime = formatArrivalTime(arrivalTime);
+                                
+                                // Determine styles based on arrival index to make subsequent arrivals smaller
+                                const isFirst = arrIndex === 0;
+                                const liPaddingClass = isFirst ? 'p-3' : 'py-1 px-3';
+                                const minutesSizeClass = isFirst ? 'text-lg' : 'text-xs';
+                                const timeSizeClass = isFirst ? 'text-sm' : 'text-xs';
+                                const fontWeightClass = isFirst ? 'font-bold' : 'font-normal';
+
                                 content += `
-                                    <li class="flex justify-between items-baseline bg-gray-50 p-3 rounded-md">
-                                        <span class="font-bold text-lg text-blue-600">${minutes}</span>
-                                        <span class="text-sm text-gray-500">${formattedTime}</span>
+                                    <li class="flex justify-between items-baseline bg-gray-50 ${liPaddingClass} rounded-md">
+                                        <span class="${fontWeightClass} ${minutesSizeClass} text-blue-600">${minutes}</span>
+                                        <span class="${timeSizeClass} text-gray-500">${formattedTime}</span>
                                     </li>
                                 `;
                             });
                         } else {
-                            content += `<li class="text-gray-600">No upcoming arrivals found.</li>`;
+                            content += `<li class="text-gray-600 p-3">No upcoming arrivals found.</li>`;
                         }
                     }
 
