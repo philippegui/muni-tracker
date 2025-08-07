@@ -66,9 +66,9 @@
             const AGENCY = 'SF';
 
             const stops = [
-                { id: '15307', name: '7 Inbound to Downtown', location: 'Lincoln Way & 17th Ave' },
-                { id: '14714', name: '7 Outbound to Ocean Beach', location: 'Frederick St & Arguello Blvd' },
-                { id: '15118', name: 'N West to Ocean Beach', location: 'Irving St & 2nd Ave' }
+                { id: '15307', route: '7', destination: 'to Downtown', location: 'Lincoln Way & 17th Ave' },
+                { id: '14714', route: '7', destination: 'to Ocean Beach', location: 'Frederick St & Arguello Blvd' },
+                { id: '15118', route: 'N', destination: 'to Ocean Beach', location: 'Irving St & 2nd Ave' }
             ];
 
             const loader = document.getElementById('loader');
@@ -125,7 +125,10 @@
 
                     let content = `
                         <div class="flex-grow">
-                            <h2 class="text-xl font-bold text-gray-800">${stopInfo.name}</h2>
+                            <h2 class="text-lg font-bold text-gray-800 flex items-center mb-2">
+                                <span class="bg-blue-600 text-white text-center font-bold rounded-md w-8 h-8 flex items-center justify-center mr-1.5 flex-shrink-0">${stopInfo.route}</span>
+                                <span class="font-semibold">${stopInfo.destination}</span>
+                            </h2>
                             <p class="text-sm text-gray-500">${stopInfo.location}</p>
                             <p class="text-xs text-gray-400 mb-4">Stop ${stopInfo.id}</p>
                             <ul class="space-y-1">
